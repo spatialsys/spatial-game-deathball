@@ -10,8 +10,7 @@ using SpatialSys.UnitySDK;
 public class Bot : MonoBehaviour
 {
     private SpatialSyncedObject syncedObject;
-    //! isHostClient param does not exist in current SDK version. This is a placeholder.
-    private bool isHostClient => true;
+    private bool isHostClient => syncedObject.isLocallyOwned;
 
     public float blockChance = 0.5f; // how likely out of 1 is the bot to block the ball
 
