@@ -14,14 +14,13 @@ public class BallVariableSync : MonoBehaviour
     public delegate void EventListenerDelegate(string eventName, object[] args);
     private EventListenerDelegate _eventListener;
 
-    public bool ownedLocally { get; private set; }
-
     // Potentially called the frame after set() is called. Not sure rn.
     public event Action<bool> OnOwnershipChanged;
     public event Action<int> OnTargetTypeChanged;
     public event Action<int> OnTargetIDChanged;
     public event Action<float> OnPowerChanged;
 
+    // 0 = actor, 1 = `bot.cs`
     private int _targetType;
     public int targetType
     {
@@ -31,10 +30,7 @@ public class BallVariableSync : MonoBehaviour
         }
         set
         {
-            if (ownedLocally)
-            {
                 VisualScriptingUtility.TriggerCustomEvent(gameObject, "SetTargetType", value);
-            }
         }
     }
 
@@ -47,10 +43,7 @@ public class BallVariableSync : MonoBehaviour
         }
         set
         {
-            if (ownedLocally)
-            {
                 VisualScriptingUtility.TriggerCustomEvent(gameObject, "SetTargetID", value);
-            }
         }
     }
 
@@ -63,10 +56,7 @@ public class BallVariableSync : MonoBehaviour
         }
         set
         {
-            if (ownedLocally)
-            {
                 VisualScriptingUtility.TriggerCustomEvent(gameObject, "SetPower", value);
-            }
         }
     }
 
@@ -75,7 +65,6 @@ public class BallVariableSync : MonoBehaviour
     private void OnEnable()
     {
         _eventListener = EventListener;
-        ownedLocally = GetComponent<SpatialSyncedObject>().isLocallyOwned;
         listener = VisualScriptingUtility.AddCustomEventListener(gameObject, EventListener);
     }
 
@@ -100,18 +89,6 @@ public class BallVariableSync : MonoBehaviour
                 _power = (float)args[0];
                 OnPowerChanged?.Invoke(_power);
                 break;
-            case "OnOwnerChanged":
-                ownedLocally = (int)args[0] == SpatialBridge.actorService.localActorNumber;
-                OnOwnershipChanged?.Invoke(ownedLocally);
-                break;
-        }
-    }
-
-    public void TakeoverOwnership()
-    {
-        if (!ownedLocally)
-        {
-            VisualScriptingUtility.TriggerCustomEvent(gameObject, "TakeoverOwnership");
         }
     }
 }

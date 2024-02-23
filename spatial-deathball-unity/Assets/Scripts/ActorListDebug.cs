@@ -4,26 +4,25 @@ using UnityEngine;
 using SpatialSys.UnitySDK;
 using TMPro;
 
-public class ActorBlockStateDebug : MonoBehaviour
+public class ActorListDebug : MonoBehaviour
 {
     public TextMeshProUGUI text;
 
     void Update()
     {
-        //lazy, just reprint every frame
         string str = "";
         foreach (IActor actor in SpatialBridge.actorService.actors.Values)
         {
-            string blockState;
-            if (actor.customProperties.TryGetValue("isBlocking", out object state))
+            string actorState;
+            if (actor.isDisposed)
             {
-                blockState = (bool)state ? "<color=green>Blocking</color>" : "<color=red>Not Blocking</color>";
+                actorState = "<color=red>Disposed</color>";
             }
             else
             {
-                blockState = "<color=yellow>Missing State</color>";
+                actorState = $"<color=green>{actor.username}</color>";
             }
-            str += $"{actor.actorNumber} : {blockState}";
+            str += $"{actor.actorNumber} : {actorState}";
             if (actor.actorNumber == SpatialBridge.actorService.localActor.actorNumber)
             {
                 str += " <b>(You)</b>";
