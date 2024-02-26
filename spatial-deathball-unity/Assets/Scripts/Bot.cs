@@ -32,10 +32,24 @@ public class Bot : MonoBehaviour
 
     private void Update()
     {
-        if (!syncedObject.isLocallyOwned) return;
-        // Do bot things:
+        UnownedUpdate();
+        if (syncedObject.isLocallyOwned)
+        {
+            OwnedUpdate();
+        }
+    }
+
+    // called on all clients every frame
+    private void UnownedUpdate()
+    {
+        // do visuals and stuff here probably...
+    }
+
+    // called on owner client every frame
+    private void OwnedUpdate()
+    {
+        // do bot ai stuff
         // beep boop
-        // move around?
         newPosTimer += Time.deltaTime;
         if (newPosTimer >= newPositionEvery)
         {
