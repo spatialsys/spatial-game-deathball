@@ -80,8 +80,12 @@ public class BallControl : MonoBehaviour
         else
         {
             // look for bot
-            target = BotManager.bots[randomPlayer - SpatialBridge.actorService.actors.Count].transform;
-            ballVariables.targetID = randomPlayer - SpatialBridge.actorService.actors.Count;
+            int botIndex = randomPlayer - SpatialBridge.actorService.actors.Count;
+            target = BotManager.bots[botIndex].transform;
+            //note that this value desyncs across clients when target is bot because its based on the index of a non-networked array.
+            ballVariables.targetID = botIndex;
+            //use this for syncing stuff
+            ballVariables.botTargetID = BotManager.bots[botIndex].syncedObject.InstanceID;
             ballVariables.targetType = 1;
         }
         Debug.LogError($"New target: {target.name}, {ballVariables.targetID}, {ballVariables.targetType}");
@@ -148,7 +152,7 @@ public class BallControl : MonoBehaviour
             collider.gameObject.layer == BOT_PLAYER_LAYER &&
             ballVariables.targetType == 1 &&
             collider.gameObject.TryGetComponent(out Bot bot) &&
-            BotManager.bots[ballVariables.targetID] == bot
+            BotManager.botDict[ballVariables.botTargetID] == bot
         )
         {
             //Ball just hit target BOT

@@ -10,7 +10,7 @@ using UnityEngine.AI;
 [RequireComponent(typeof(SpatialSyncedObject)), RequireComponent(typeof(NavMeshAgent))]
 public class Bot : MonoBehaviour
 {
-    public SpatialSyncedObject syncedObject {get; private set;}
+    public SpatialSyncedObject syncedObject { get; private set; }
     private NavMeshAgent navMeshAgent;
 
     public float newPositionEvery = 2f; // how often to move to a new position
@@ -58,5 +58,10 @@ public class Bot : MonoBehaviour
     public void HitBot()
     {
         SpatialBridge.vfxService.CreateFloatingText("Beep Ouch!", FloatingTextAnimStyle.Bouncy, transform.position, Vector3.up, Color.red);
+    }
+
+    private bool IsBallTargetingMe()
+    {
+        return BallControl.instance.ballVariables.targetType == 1 && BallControl.instance.ballVariables.botTargetID == syncedObject.InstanceID;
     }
 }

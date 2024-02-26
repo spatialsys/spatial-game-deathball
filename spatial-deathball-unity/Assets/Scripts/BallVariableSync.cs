@@ -18,6 +18,7 @@ public class BallVariableSync : MonoBehaviour
     public event Action<bool> OnOwnershipChanged;
     public event Action<int> OnTargetTypeChanged;
     public event Action<int> OnTargetIDChanged;
+    public event Action<string> OnBotTargetIDChanged;
     public event Action<float> OnPowerChanged;
 
     // 0 = actor, 1 = `bot.cs`
@@ -30,7 +31,7 @@ public class BallVariableSync : MonoBehaviour
         }
         set
         {
-                VisualScriptingUtility.TriggerCustomEvent(gameObject, "SetTargetType", value);
+            VisualScriptingUtility.TriggerCustomEvent(gameObject, "SetTargetType", value);
         }
     }
 
@@ -43,7 +44,20 @@ public class BallVariableSync : MonoBehaviour
         }
         set
         {
-                VisualScriptingUtility.TriggerCustomEvent(gameObject, "SetTargetID", value);
+            VisualScriptingUtility.TriggerCustomEvent(gameObject, "SetTargetID", value);
+        }
+    }
+
+    private string _botTargetID;
+    public string botTargetID
+    {
+        get
+        {
+            return _botTargetID;
+        }
+        set
+        {
+            VisualScriptingUtility.TriggerCustomEvent(gameObject, "SetBotTargetID", value);
         }
     }
 
@@ -56,7 +70,7 @@ public class BallVariableSync : MonoBehaviour
         }
         set
         {
-                VisualScriptingUtility.TriggerCustomEvent(gameObject, "SetPower", value);
+            VisualScriptingUtility.TriggerCustomEvent(gameObject, "SetPower", value);
         }
     }
 
@@ -88,6 +102,10 @@ public class BallVariableSync : MonoBehaviour
             case "OnPowerChanged":
                 _power = (float)args[0];
                 OnPowerChanged?.Invoke(_power);
+                break;
+            case "OnBotTargetIDChanged":
+                _botTargetID = (string)args[0];
+                OnBotTargetIDChanged?.Invoke((string)args[0]);
                 break;
         }
     }
