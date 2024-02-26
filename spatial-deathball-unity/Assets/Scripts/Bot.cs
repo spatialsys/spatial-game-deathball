@@ -10,7 +10,7 @@ using UnityEngine.AI;
 [RequireComponent(typeof(SpatialSyncedObject)), RequireComponent(typeof(NavMeshAgent))]
 public class Bot : MonoBehaviour
 {
-    private SpatialSyncedObject syncedObject;
+    public SpatialSyncedObject syncedObject {get; private set;}
     private NavMeshAgent navMeshAgent;
 
     public float newPositionEvery = 2f; // how often to move to a new position

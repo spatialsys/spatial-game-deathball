@@ -12,6 +12,8 @@ using UnityEngine;
 [RequireComponent(typeof(BallVariableSync)), RequireComponent(typeof(Rigidbody))]
 public class BallControl : MonoBehaviour
 {
+    public static BallControl instance;
+
     private const int PLAYER_TRIGGER_LAYER = 7;
     private const int BOT_PLAYER_LAYER = 6;
 
@@ -20,7 +22,8 @@ public class BallControl : MonoBehaviour
     public float forceByPower = 10f;// how much force we add to the ball per power
     public float rotationByPower = 1f;// how much we rotate the ball's velocity per power
 
-    private BallVariableSync ballVariables;
+    public BallVariableSync ballVariables { get; private set; }
+
     private Rigidbody rb;
     private SpatialSyncedObject syncedObject;
 
@@ -29,6 +32,7 @@ public class BallControl : MonoBehaviour
 
     private void Start()
     {
+        instance = this;
         ballVariables = GetComponent<BallVariableSync>();
         rb = GetComponent<Rigidbody>();
         syncedObject = GetComponent<SpatialSyncedObject>();
@@ -51,13 +55,14 @@ public class BallControl : MonoBehaviour
         // cringe:
         // todo proper find next target logic
         int lastTargetExtendedID = ballVariables.targetID + (ballVariables.targetType == 0 ? 0 : SpatialBridge.actorService.actors.Count);
-        do 
+        do
         {
             randomPlayer = Random.Range(0, totalPlayers);
         } while (randomPlayer == lastTargetExtendedID);
 
         if (randomPlayer < SpatialBridge.actorService.actors.Count)
         {
+            // look for player
             try
             {
                 int targetActorID = SpatialBridge.actorService.actors.ElementAt(randomPlayer).Key;
@@ -74,6 +79,7 @@ public class BallControl : MonoBehaviour
         }
         else
         {
+            // look for bot
             target = BotManager.bots[randomPlayer - SpatialBridge.actorService.actors.Count].transform;
             ballVariables.targetID = randomPlayer - SpatialBridge.actorService.actors.Count;
             ballVariables.targetType = 1;
