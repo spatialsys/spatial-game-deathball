@@ -1,7 +1,7 @@
 # For Regression:
 As of writing the game is an extrememly minimal prototype of the gameplay. A ball bounces between players/bots and checks for a block state each hit.
 
-In this version bots are a [Synced Object](https://docs.spatial.io/components/synced-object) which are controller by a single client at a time.
+In this version bots are a [Synced Object](https://docs.spatial.io/components/synced-object) which are controlled by a single client at a time.
 
 The game can handle multiple players and players joining/leaving.
 
@@ -13,6 +13,6 @@ The game can handle multiple players and players joining/leaving.
 
 List of bots available in `BotManager.cs`
 
-`BallControl.cs` to modify how the ball moves and what id does on collision
+`BallControl.cs` to modify how the ball moves and what it does on collision
 
-`LocalPlayerControls` to modify what the local player can do.
+`LocalPlayerControls.cs` to modify what the local player can do.
