@@ -96,11 +96,6 @@ public class Bot : MonoBehaviour
         SpatialBridge.vfxService.CreateFloatingText("Beep Ouch!", FloatingTextAnimStyle.Bouncy, transform.position, Vector3.up, Color.red);
     }
 
-    protected void Move()
-    {
-        
-    }
-    
     private bool IsBallTargetingMe()
     {
         return BallControl.instance.ballVariables.targetType == 1 && BallControl.instance.ballVariables.botTargetID == syncedObject.InstanceID;
