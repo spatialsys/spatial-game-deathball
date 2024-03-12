@@ -29,4 +29,9 @@ public class BotManager : MonoBehaviour
         bots.Remove(bot);
         botDict.Remove(bot.syncedObject.InstanceID);
     }
+
+    public static List<Bot> GetAllBots()
+    {
+        return bots;
+    }
 }

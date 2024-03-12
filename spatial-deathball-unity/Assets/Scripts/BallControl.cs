@@ -46,59 +46,170 @@ public class BallControl : MonoBehaviour
         }
     }
 
-    private bool TryFindNewTarget(bool resetVelocity)
+    private bool TryFindNewTarget(bool resetVelocity, bool targetClosest = false)
     {
-        previousTarget = target;
-        int totalPlayers = SpatialBridge.actorService.actors.Count + BotManager.bots.Count;
-        int randomPlayer;
+        bool foundTarget = targetClosest ? FindClosestTarget() : FindRandomTarget();
 
-        // cringe:
-        // todo proper find next target logic
-        int lastTargetExtendedID = ballVariables.targetID + (ballVariables.targetType == 0 ? 0 : SpatialBridge.actorService.actors.Count);
-        do
+        if (!foundTarget)
         {
-            randomPlayer = Random.Range(0, totalPlayers);
-        } while (randomPlayer == lastTargetExtendedID);
-
-        if (randomPlayer < SpatialBridge.actorService.actors.Count)
-        {
-            // look for player
-            try
-            {
-                int targetActorID = SpatialBridge.actorService.actors.ElementAt(randomPlayer).Key;
-                target = SpatialBridge.actorService.actors[targetActorID].avatar.GetAvatarBoneTransform(HumanBodyBones.Chest);
-                ballVariables.targetID = targetActorID;
-                ballVariables.targetType = 0;
-            }
-            catch (System.Exception e)
-            {
-                Debug.LogError("Failed to find chest bone on player " + randomPlayer + " " + e);
-                target = null;
-                return false;
-            }
+            Debug.LogError("Failed to find a new target.");
+            return false;
         }
-        else
-        {
-            // look for bot
-            int botIndex = randomPlayer - SpatialBridge.actorService.actors.Count;
-            target = BotManager.bots[botIndex].transform;
-            //note that this value desyncs across clients when target is bot because its based on the index of a non-networked array.
-            ballVariables.targetID = botIndex;
-            //use this for syncing stuff
-            ballVariables.botTargetID = BotManager.bots[botIndex].syncedObject.InstanceID;
-            ballVariables.targetType = 1;
-        }
-        Debug.LogError($"New target: {target.name}, {ballVariables.targetID}, {ballVariables.targetType}");
 
         if (resetVelocity)
         {
-            rb.velocity = Vector3.up * 6f;
+            rb.velocity = Vector3.up * 6f; // Resetting the velocity upwards
         }
         else
         {
+            // Adjusting the velocity towards the new target
             rb.velocity = (target.position - transform.position).normalized * rb.velocity.magnitude;
         }
+
+        Debug.LogError($"New target: {target.name}, {ballVariables.targetID}, {ballVariables.targetType}");
         return true;
+    }
+
+    private bool FindClosestTarget()
+    {
+        float minDistance = float.MaxValue;
+        Transform closestTarget = null;
+        int closestTargetID = -1;
+        int closestBotIndex = -1;
+        int targetType = -1; // 0 for player, 1 for bot
+
+        int previousPlayerTargetID = ballVariables.targetType == 0 ? ballVariables.targetID : -1;
+        string previousBotTargetID = ballVariables.targetType == 1 ? ballVariables.botTargetID : null;
+
+        // Check for closest player
+        foreach (var player in SpatialBridge.actorService.actors)
+        {
+            try
+            {
+                if (player.Value == null || player.Value.avatar == null)
+                {
+                    Debug.LogError($"Player value or avatar is null for player ID: {player.Key}");
+                    continue;
+                }
+
+                // Skip if this was the last target and it's a player
+                if (ballVariables.targetType == 0 && player.Key == previousPlayerTargetID)
+                    continue;
+
+                Transform playerTransform = player.Value.avatar.GetAvatarBoneTransform(HumanBodyBones.Chest);
+                float distance = Vector3.Distance(transform.position, playerTransform.position);
+                if (distance < minDistance)
+                {
+                    minDistance = distance;
+                    closestTarget = playerTransform;
+                    closestTargetID = player.Key;
+                    targetType = 0;
+                }
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"Failed to find chest bone on player {player.Key}: {e}");
+            }
+        }
+
+        // Check for closest bot
+        for (int i = 0; i < BotManager.bots.Count; i++)
+        {
+            var bot = BotManager.bots[i];
+
+            // Skip if this was the last target and it's a bot
+            if (ballVariables.targetType == 1 && bot.syncedObject.InstanceID == previousBotTargetID)
+                continue;
+
+            float distance = Vector3.Distance(transform.position, bot.transform.position);
+            if (distance < minDistance)
+            {
+                minDistance = distance;
+                closestTarget = bot.transform;
+                closestBotIndex = i;
+                targetType = 1;
+            }
+        }
+
+        // Set the target if one is found
+        if (closestTarget != null)
+        {
+            target = closestTarget;
+            if (targetType == 1)
+            {
+                // When the target is a bot, set both targetID and botTargetID
+                ballVariables.targetID = closestBotIndex;
+                ballVariables.botTargetID = BotManager.bots[closestBotIndex].syncedObject.InstanceID;
+            }
+            else
+            {
+                // For players, just set the targetID
+                ballVariables.targetID = closestTargetID;
+            }
+            ballVariables.targetType = targetType;
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool FindRandomTarget()
+    {
+        int totalEntities = SpatialBridge.actorService.actors.Count + BotManager.bots.Count;
+        int randomIndex;
+        int attempts = 0;
+
+        int previousPlayerTargetID = ballVariables.targetType == 0 ? ballVariables.targetID : -1;
+        string previousBotTargetID = ballVariables.targetType == 1 ? ballVariables.botTargetID : null;
+
+        do
+        {
+            randomIndex = Random.Range(0, totalEntities);
+            if (randomIndex < SpatialBridge.actorService.actors.Count)
+            {
+                // If targeting a player, check if it's the previously targeted player
+                int potentialTargetID = SpatialBridge.actorService.actors.ElementAt(randomIndex).Key;
+                if (ballVariables.targetType == 0 && potentialTargetID == previousPlayerTargetID && totalEntities > 1)
+                {
+                    continue; // Skip and reselect if it's the same as the previous target
+                }
+
+                // If it's a new target, set the target
+                try
+                {
+                    target = SpatialBridge.actorService.actors[potentialTargetID].avatar.GetAvatarBoneTransform(HumanBodyBones.Chest);
+                    ballVariables.targetID = potentialTargetID;
+                    ballVariables.targetType = 0;
+                    return true;
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogError($"Failed to find chest bone on player {randomIndex}: {e}");
+                    return false; // Exit if there's an exception
+                }
+            }
+            else
+            {
+                // If targeting a bot, check if it's the previously targeted bot
+                int botIndex = randomIndex - SpatialBridge.actorService.actors.Count;
+                string potentialBotTargetID = BotManager.bots[botIndex].syncedObject.InstanceID;
+                if (ballVariables.targetType == 1 && potentialBotTargetID == previousBotTargetID && totalEntities > 1)
+                {
+                    continue; // Skip and reselect if it's the same as the previous target
+                }
+
+                // If it's a new target, set the target
+                target = BotManager.bots[botIndex].transform;
+                ballVariables.targetID = botIndex; // Local identifier for the bot
+                ballVariables.botTargetID = potentialBotTargetID; // Synced identifier for networked environments
+                ballVariables.targetType = 1;
+                return true;
+            }
+
+            attempts++;
+        } while (attempts < totalEntities);
+
+        return false; // In case no new target is found after checking all entities
     }
 
     private void OwnedUpdate()
@@ -160,12 +271,12 @@ public class BallControl : MonoBehaviour
             {
                 ballVariables.power = 1f;
                 bot.HitBot();
-                TryFindNewTarget(true);
+                TryFindNewTarget(true, bot.CheckIfTargetClosest());
             }
             else
             {
                 SpatialBridge.vfxService.CreateFloatingText("BLOCKED!", FloatingTextAnimStyle.Bouncy, transform.position, Vector3.up, Color.green);
-                TryFindNewTarget(false);
+                TryFindNewTarget(false, bot.CheckIfTargetClosest());
             }
         }
     }
