@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4b1f9f92b8d2d47a2a25c5781267754e, type: 3}
   m_Name: BotConfig
   m_EditorClassIdentifier: 
-  refreshPositionTime: 2
-  minDistToPlayers: 5
+  refreshPositionTimeRange: {x: 1, y: 4}
+  minDistToPlayersRange: {x: 1.8795182, y: 4.040166}
   blockChance: 0.9
   targetClosestPlayerChance: 0.5

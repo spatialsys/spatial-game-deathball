@@ -47,7 +47,7 @@ public class Bot : MonoBehaviour
     private void OwnedUpdate()
     {
         newPosTimer += Time.deltaTime;
-        if (newPosTimer >= config.refreshPositionTime)
+        if (newPosTimer >= config.GetRandomRefreshPositionTime())
         {
             newPosTimer = 0;
             Vector3 targetPosition;
@@ -56,7 +56,7 @@ public class Bot : MonoBehaviour
             var minDistance = FindClosestBot(out closestBot);
 
             // Check if the closest bot is within the minimum distance
-            float minimumDistance = config.minDistToPlayers;
+            float minimumDistance = config.GetRandomMinDistToPlayers();
             if (closestBot != null && minDistance < minimumDistance)
             {
                 // Move away from the closest bot
