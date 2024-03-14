@@ -47,36 +47,34 @@ public class Bot : MonoBehaviour
     private void OwnedUpdate()
     {
         newPosTimer += Time.deltaTime;
-        if (newPosTimer >= config.GetRandomRefreshPositionTime())
+        Vector3? targetPosition = null;
+        
+        // On any frame, move away if the closest player is too close to another entity
+        var closestDistance = FindClosestPlayerEntity(out var closestBot);
+
+        // Check if the closest entity is within the minimum distance
+        float minimumDistance = config.minDistToPlayer;
+        if (closestBot != null && closestDistance < minimumDistance)
+        {
+            // Move away from the closest entity
+            var position = transform.position;
+            Vector3 awayDirection = position - closestBot.transform.position;
+            targetPosition = position + (awayDirection.normalized * maxMoveDist);
+        } 
+        else if (newPosTimer >= config.GetRandomRefreshPositionTime())
         {
             newPosTimer = 0;
-            Vector3 targetPosition;
-
-            Bot closestBot = null;
-            var minDistance = FindClosestBot(out closestBot);
-
-            // Check if the closest bot is within the minimum distance
-            float minimumDistance = config.GetRandomMinDistToPlayers();
-            if (closestBot != null && minDistance < minimumDistance)
-            {
-                // Move away from the closest bot
-                Vector3 awayDirection = transform.position - closestBot.transform.position;
-                targetPosition = transform.position + (awayDirection.normalized * maxMoveDist);
-            }
-            else
-            {
-                // Random movement logic
-                Vector3 randomDirection = Random.insideUnitSphere * maxMoveDist;
-                randomDirection += transform.position;
-                targetPosition = randomDirection;
-            }
-
-            // Check if the target position is valid on the NavMesh
-            NavMeshHit hit;
-            if (NavMesh.SamplePosition(targetPosition, out hit, maxMoveDist, 1))
-            {
-                navMeshAgent.SetDestination(hit.position);
-            }
+            
+            // Random movement logic
+            Vector3 randomDirection = Random.insideUnitSphere * maxMoveDist;
+            randomDirection += transform.position;
+            targetPosition = randomDirection;
+        }
+        
+        // Update the target - but first check if the target position is valid on the NavMesh
+        if (targetPosition != null && NavMesh.SamplePosition(targetPosition.Value, out var hit, maxMoveDist, 1))
+        {
+            navMeshAgent.SetDestination(hit.position);
         }
     }
 
@@ -101,12 +99,12 @@ public class Bot : MonoBehaviour
         return BallControl.instance.ballVariables.targetType == 1 && BallControl.instance.ballVariables.botTargetID == syncedObject.InstanceID;
     }
 
-    private float FindClosestBot(out Bot closestBot)
+    private float FindClosestPlayerEntity(out GameObject closestEntity)
     {
-        // Find all bots
+        // First, search through all bots
         var allBots = BotManager.GetAllBots();
         float minDistance = float.MaxValue;
-        closestBot = null;
+        closestEntity = null;
 
         // Find the closest bot
         foreach (var bot in allBots)
@@ -118,8 +116,21 @@ public class Bot : MonoBehaviour
                 if (distance < minDistance)
                 {
                     minDistance = distance;
-                    closestBot = bot;
+                    closestEntity = bot.gameObject;
                 }
+            }
+        }
+        
+        // Then search through all players
+        var allPlayers = SpatialBridge.actorService.actors.Values;
+        foreach (var player in allPlayers)
+        {
+            Transform playerTransform = player.avatar.GetAvatarBoneTransform(HumanBodyBones.Chest);
+            float distance = Vector3.Distance(transform.position, playerTransform.position);
+            if (distance < minDistance)
+            {
+                minDistance = distance;
+                closestEntity = playerTransform.gameObject;
             }
         }
 

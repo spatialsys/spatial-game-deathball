@@ -7,7 +7,7 @@ public class BotConfigEditor : Editor
     public override void OnInspectorGUI()
     {
         // Fetch current target object
-        BotConfig config = (BotConfig)target;
+        BotConfig config = (BotConfig) target;
 
         // Ensure any serialized object changes are tracked
         serializedObject.Update();
@@ -17,7 +17,7 @@ public class BotConfigEditor : Editor
 
         // Draw the custom sliders
         DrawMinMaxSlider(ref config.refreshPositionTimeRange, 0f, 5f, "Refresh Position Time");
-        DrawMinMaxSlider(ref config.minDistToPlayersRange, 0f, 10f, "Min Dist To Players");
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("minDistToPlayer"), new GUIContent("Min Dist To Players"));
 
         // Manually draw other properties here if needed, excluding the custom-handled Vector2 fields
         EditorGUILayout.Space(); // Adds some spacing
