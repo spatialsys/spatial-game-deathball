@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using SpatialSys.UnitySDK;
 using UnityEngine.AI;
@@ -10,12 +8,12 @@ using UnityEngine.AI;
 [RequireComponent(typeof(SpatialSyncedObject)), RequireComponent(typeof(NavMeshAgent))]
 public class Bot : MonoBehaviour
 {
+    const float maxMoveDist = 25f;
+
+    public BotConfig config;
+
     public SpatialSyncedObject syncedObject { get; private set; }
     private NavMeshAgent navMeshAgent;
-
-    public float newPositionEvery = 2f; // how often to move to a new position
-    public float blockChance = 0.5f; // how likely out of 1 is the bot to block the ball
-
     private float newPosTimer;
 
     private void OnEnable()
@@ -48,25 +46,47 @@ public class Bot : MonoBehaviour
     // called on owner client every frame
     private void OwnedUpdate()
     {
-        // do bot ai stuff
-        // beep boop
         newPosTimer += Time.deltaTime;
-        if (newPosTimer >= newPositionEvery)
+        Vector3? targetPosition = null;
+        
+        // On any frame, move away if the closest player is too close to another entity
+        var closestDistance = FindClosestPlayerEntity(out var closestBot);
+
+        // Check if the closest entity is within the minimum distance
+        float minimumDistance = config.minDistToPlayer;
+        if (closestBot != null && closestDistance < minimumDistance)
+        {
+            // Move away from the closest entity
+            var position = transform.position;
+            Vector3 awayDirection = position - closestBot.transform.position;
+            targetPosition = position + (awayDirection.normalized * maxMoveDist);
+        } 
+        else if (newPosTimer >= config.GetRandomRefreshPositionTime())
         {
             newPosTimer = 0;
-            Vector3 randomDirection = Random.insideUnitSphere * 10f;
+            
+            // Random movement logic
+            Vector3 randomDirection = Random.insideUnitSphere * maxMoveDist;
             randomDirection += transform.position;
-            NavMeshHit hit;
-            if (NavMesh.SamplePosition(randomDirection, out hit, 25f, 1))
-            {
-                navMeshAgent.SetDestination(hit.position);
-            }
+            targetPosition = randomDirection;
+        }
+        
+        // Update the target - but first check if the target position is valid on the NavMesh
+        if (targetPosition != null && NavMesh.SamplePosition(targetPosition.Value, out var hit, maxMoveDist, 1))
+        {
+            navMeshAgent.SetDestination(hit.position);
         }
     }
 
+
     public bool CheckIfBlocking()
     {
-        return Random.value < blockChance;
+        return Random.value < config.blockChance;
+    }
+
+    public bool CheckIfTargetClosest()
+    {
+        return Random.value < config.targetClosestPlayerChance;
     }
 
     public void HitBot()
@@ -77,5 +97,43 @@ public class Bot : MonoBehaviour
     private bool IsBallTargetingMe()
     {
         return BallControl.instance.ballVariables.targetType == 1 && BallControl.instance.ballVariables.botTargetID == syncedObject.InstanceID;
+    }
+
+    private float FindClosestPlayerEntity(out GameObject closestEntity)
+    {
+        // First, search through all bots
+        var allBots = BotManager.GetAllBots();
+        float minDistance = float.MaxValue;
+        closestEntity = null;
+
+        // Find the closest bot
+        foreach (var bot in allBots)
+        {
+            // Ensure we don't compare the bot to itself
+            if (bot.gameObject != gameObject)
+            {
+                float distance = Vector3.Distance(transform.position, bot.transform.position);
+                if (distance < minDistance)
+                {
+                    minDistance = distance;
+                    closestEntity = bot.gameObject;
+                }
+            }
+        }
+        
+        // Then search through all players
+        var allPlayers = SpatialBridge.actorService.actors.Values;
+        foreach (var player in allPlayers)
+        {
+            Transform playerTransform = player.avatar.GetAvatarBoneTransform(HumanBodyBones.Chest);
+            float distance = Vector3.Distance(transform.position, playerTransform.position);
+            if (distance < minDistance)
+            {
+                minDistance = distance;
+                closestEntity = playerTransform.gameObject;
+            }
+        }
+
+        return minDistance;
     }
 }
